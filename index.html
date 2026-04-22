@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>買い物リスト</title>
+
+<style>
+
+body {
+    font-family: system-ui, sans-serif;
+    background-color: #f3f4f6;
+    padding: 30px;
+}
+
+.container {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    max-width: 520px;
+    margin: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+h1 {
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.date {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.check-item {
+    display: grid;
+    grid-template-columns: 1fr 60px;
+    grid-template-rows: auto auto;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    background-color: #f9fafb;
+    transition: 0.2s;
+}
+
+.check-item.checked {
+    background-color: #d1fae5;
+}
+
+.item-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.time {
+    font-size: 12px;
+    color: #6b7280;
+    grid-column: 1 / span 2;
+    grid-row: 2;
+    margin-left: 24px;
+}
+
+.delete-btn {
+    font-size: 12px;
+    padding: 4px 6px;
+    border: none;
+    background-color: #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.delete-btn:hover {
+    background-color: #d1d5db;
+}
+
+.add-area {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 60px;
+    gap: 6px;
+}
+
+input[type="text"] {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+}
+
+button {
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+    background-color: #e5e7eb;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #d1d5db;
+}
+
+.action-btn {
+    margin-top: 14px;
+    width: 100%;
+}
+
+#itemList {
+    margin-top: 10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>買い物リスト</h1>
+
+<div class="date" id="dateDisplay"></div>
+
+<div id="itemList"></div>
+
+<div class="add-area">
+<input type="text" id="newItemText" placeholder="新しい項目を入力">
+<button onclick="addItem()">追加</button>
+</div>
+
+<button class="action-btn" onclick="clearAllChecks()">
+すべてのチェックをオフ
+</button>
+
+</div>
+
+<script>
+
+const storageKey = "daily_check_items";
+
+function getToday() {
+    return new Date().toISOString().split('T')[0];
+}
+
+function getCurrentDateTime() {
+    return new Date().toLocaleString();
+}
+
+console.log("アプリ起動");
+
+document.getElementById("dateDisplay").textContent =
+    "日付: " + getToday();
+
+
+function initializeData() {
+
+    console.log("initializeData 呼び出し");
+
+    let data = JSON.parse(localStorage.getItem(storageKey));
+
+    console.log("保存データ読み込み:", data);
+
+    if (!data) {
+
+        console.log("初期データを作成します");
+
+        data = {
+            items: [
+
+            ]
+        };
+
+        localStorage.setItem(
+            storageKey,
+            JSON.stringify(data)
+        );
+
+        console.log("初期データ保存完了");
+    }
+
+    return data;
+}
+
+
+function renderItems() {
+
+    console.log("renderItems 開始");
+
+    const data = initializeData();
+
+    console.log("描画対象データ:", data);
+
+    const list = document.getElementById("itemList");
+
+    list.innerHTML = "";
+
+    data.items.forEach((item, index) => {
+
+        console.log("項目描画:", index, item);
+
+        const div = document.createElement("div");
+        div.className = "check-item";
+
+        if (item.checked) {
+            div.classList.add("checked");
+        }
+
+        const labelDiv = document.createElement("div");
+        labelDiv.className = "item-label";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = item.checked;
+
+        checkbox.addEventListener("change", () => {
+            console.log("チェック変更:", index, checkbox.checked);
+            toggleItem(index, checkbox.checked);
+        });
+
+        const nameText = document.createElement("span");
+        nameText.textContent = item.name;
+
+        labelDiv.appendChild(checkbox);
+        labelDiv.appendChild(nameText);
+
+        const timeSpan = document.createElement("div");
+        timeSpan.className = "time";
+        timeSpan.textContent = item.time;
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "削除";
+        deleteBtn.className = "delete-btn";
+
+        deleteBtn.addEventListener("click", () => {
+            console.log("削除ボタン押下:", index);
+            deleteItem(index);
+        });
+
+        div.appendChild(labelDiv);
+        div.appendChild(deleteBtn);
+        div.appendChild(timeSpan);
+
+        list.appendChild(div);
+    });
+
+    console.log("renderItems 完了");
+}
+
+
+function toggleItem(index, checked) {
+
+    console.log("toggleItem 呼び出し:", index, checked);
+
+    let data = initializeData();
+
+    data.items[index].checked = checked;
+
+    if (checked) {
+        data.items[index].time = getCurrentDateTime();
+        console.log("チェックON 時刻記録:", data.items[index].time);
+    } else {
+        data.items[index].time = "";
+        console.log("チェックOFF 時刻削除");
+    }
+
+    localStorage.setItem(
+        storageKey,
+        JSON.stringify(data)
+    );
+
+    console.log("保存後データ:", data);
+
+    renderItems();
+}
+
+
+function deleteItem(index) {
+
+    console.log("deleteItem 呼び出し:", index);
+
+    let data = initializeData();
+
+    console.log("削除前データ:", data);
+
+    data.items.splice(index, 1);
+
+    localStorage.setItem(
+        storageKey,
+        JSON.stringify(data)
+    );
+
+    console.log("削除後データ:", data);
+
+    renderItems();
+}
+
+
+function addItem() {
+
+    console.log("addItem 呼び出し");
+
+    const input = document.getElementById("newItemText");
+
+    const text = input.value.trim();
+
+    console.log("入力値:", text);
+
+    if (!text) {
+        console.log("空入力のため追加中止");
+        return;
+    }
+
+    let data = initializeData();
+
+    data.items.push({
+        name: text,
+        checked: false,
+        time: ""
+    });
+
+    localStorage.setItem(
+        storageKey,
+        JSON.stringify(data)
+    );
+
+    console.log("追加後データ:", data);
+
+    input.value = "";
+
+    renderItems();
+}
+
+
+function clearAllChecks() {
+
+    console.log("clearAllChecks 呼び出し");
+
+    let data = initializeData();
+
+    data.items.forEach(item => {
+        item.checked = false;
+        item.time = "";
+    });
+
+    localStorage.setItem(
+        storageKey,
+        JSON.stringify(data)
+    );
+
+    console.log("全チェック解除後データ:", data);
+
+    renderItems();
+}
+
+
+document
+.getElementById("newItemText")
+.addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        console.log("Enterキー押下 → addItem 実行");
+        addItem();
+    }
+});
+
+
+console.log("初期描画開始");
+renderItems();
+console.log("初期描画完了");
+
+</script>
+
+</body>
+</html>
